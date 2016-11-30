@@ -71,13 +71,21 @@ def flattenRecord(r):
     variant_as_val.update(func_as_val)
     return variant_as_val
 
-COLUMNS_ORDER = \
-        'CHROM POS OPOS REF OREF ALT OALT OMAPALT TYPE FILTER gene location \
-        LEN HS HRUN ID OID exon transcript coding codon function grantham \
-        gt normalizedAlt normalizedPos normalizedRef origAlt origPos \
-        origRef polyphen protein sift QUAL QD DP FDP AF AO FAO FRO FR FSAF \
-        FSAR FSRF FSRR FWDB FXX MLLD RBI REFB REVB RO SAF SAR SRF SRR SSEN \
-        SSEP SSSB STB STBP VARB GQ GT'.split()
+COLUMNS_ORDER = [
+'CHROM','POS','OPOS','REF','Ref','OREF','ALT','OALT','OMAPALT','TYPE','Type',
+'FILTER','No Call Reason','gene','Genes','location','Location','LEN',
+'Homopolymer Length','Length','HS','Info','HRUN','ID','OID','Variant ID',
+'Variant Name','exon','Exon','transcript','Transcript','Strand','coding',
+'Coding','codon','function','Variant Effect','Amino Acid Change','protein',
+'QUAL','QD','p-value','Phred QUAL Score','DP','Coverage','FDP','AF','AO',
+'% Frequency','FAO','Allele Coverage','Allele Ratio','Ref+/Ref-/Var+/Var-',
+'FRO','FR','FSAF','FSAR','FSRF','FSRR','FWDB','FXX','MLLD','RBI','REFB','REVB',
+'RO','SAF','SAR','SRF','SRR','SSEN','SSEP','SSSB','STB','STBP','VARB',
+'grantham','Grantham','PhyloP','sift','SIFT','polyphen','PolyPhen','PFAM',
+'dbSNP','DGV','MAF','EMAF','AMAF','GMAF','UCSC Common SNPs','COSMIC','OMIM',
+'Gene Ontology','DrugBank','ClinVar','gt','GT','Genotype','GQ','normalizedAlt',
+'normalizedPos','normalizedRef','origAlt','origPos','origRef'
+]
 
 def orderer(order, element):
     ''' Custom order for columns and push to the bottom unknown field'''
@@ -107,9 +115,9 @@ def vcf2df(a_vcf):
 def mergeTable(df, table):
     tab = pd.read_table(table, comment='#')
     df['KEY'] = df.CHROM.str.cat(df.POS.map(str), sep=':')
-    merged = pd.merge(df, tab, left_on='KEY', right_on='Locus')
-    merged.drop(['KEY', 'Locus'], axis=1, inplace=True)
-    return merged
+    m = pd.merge(df, tab, how='left', left_on='KEY', right_on='Locus')
+    m.drop(['KEY', 'Locus'], axis=1, inplace=True)
+    return m[sorted(m.columns, key=lambda x:orderer(COLUMNS_ORDER, x))]
 
 if __name__ == '__main__':
     # Read input
