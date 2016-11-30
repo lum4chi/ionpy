@@ -104,16 +104,14 @@ def vcf2df(a_vcf):
 
 # Merge information
 #TODO Merge other tsv information by locus(CHROM:POS)
-def enrichByTable(ion_file, vcf_file):
-    ion = pd.read_table(ion_file, comment='#')
-    in_vcf = pyvcf.Reader(open(vcf_file))
-    vcf = pd.DataFrame.from_records(list(vcf_iterable(in_vcf)), \
-            columns=['Locus','_OPOS','_OREF','_OALT','_QUAL'] + \
-                    ['_'+sample+'_GT' for sample in in_vcf.samples])
-    return pd.merge(ion, vcf, on='Locus')
+def mergeTable(df, table):
+    tab = pd.read_table(table, comment='#')
+    df['KEY'] = df.CHROM.str.cat(df.POS.map(str), sep=':')
+    merged = pd.merge(df, tab, left_on='KEY', right_on='Locus')
+    merged.drop(['KEY', 'Locus'], axis=1, inplace=True)
+    return merged
 
 if __name__ == '__main__':
-    #TODO Merge other tsv information by locus(CHROM:POS)
     # Read input
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs='+', help="List of vcf and a (optional) \
@@ -138,7 +136,7 @@ if __name__ == '__main__':
         # Print on stdout (if multiple file, header will be repeated) or append
         # to vcf name the provided suffix and write to multiple file
         out = sys.stdout if out_suffix is None else \
-                            os.path.splitext(vcf)[0] + out_suffix
-        vcf_df = vcf2df(vcf)                # Convert vcf in a DataFrame
-        #vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
-        vcf_df.to_csv(out+'.tsv', sep='\t', index=False)
+                            os.path.splitext(vcf)[0] + out_suffix + '.tsv'
+        vcf_df = vcf2df(vcf)                    # Convert vcf in a DataFrame
+        vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
+        vcf_df.to_csv(out, sep='\t', index=False)
