@@ -128,16 +128,17 @@ if __name__ == '__main__':
     # Split files by extension and (hopefully) paired by lexicographic sorting
     vcfs = sorted([v for v in files if os.path.splitext(v)[1] == '.vcf'])
     tables = sorted([t for t in files if os.path.splitext(t)[1] != '.vcf'])
+
     # (soft) check on wrong pairing
-    if len(vcfs)!=len(tables): raise Error('Files mismatch: check correct \
-    pairing 1 vcf -> 1 table')
+    if len(tables)>0 and len(vcfs)!=len(tables):
+        raise Error('Files mismatch: check correct pairing 1 vcf -> 1 table')
 
     # Process by pair
-    for vcf, table in zip(vcfs, tables):
+    for i, vcf in enumerate(vcfs):
         # Print on stdout (if multiple file, header will be repeated) or append
         # to vcf name the provided suffix and write to multiple file
         out = sys.stdout if out_suffix is None else \
                             os.path.splitext(vcf)[0] + out_suffix
         vcf_df = vcf2df(vcf)                # Convert vcf in a DataFrame
-        #vcf_df = mergeTable(vcf_df, table)  # Enrich with other table
+        #vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
         vcf_df.to_csv(out+'.tsv', sep='\t', index=False)
