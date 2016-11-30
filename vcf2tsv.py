@@ -12,12 +12,15 @@ import numpy as np
 import json, argparse, os, sys
 
 def flattenRecord(r):
-    ''' Extract from vcf interesting field '''
+    ''' Extract from vcf interesting field: main goal is to exclude unwanted
+        info but never include it explicity. This allow to NOT skip some
+        unexpected info.
+    '''
     # Import as possible
     variant = r.__dict__
     # Get sample info
     sample_as_val = {'GT':r.samples[0]['GT'], 'GQ':r.samples[0]['GQ']}
-    # Remove unused
+    # Remove unused information (TODO: there is something else to keep?)
     del(variant['FORMAT'])
     del(variant['samples'])
     del(variant['start'])
@@ -99,24 +102,42 @@ def vcf2df(a_vcf):
     df.HS = df.HS.astype(bool)
     return df
 
+# Merge information
+#TODO Merge other tsv information by locus(CHROM:POS)
+def enrichByTable(ion_file, vcf_file):
+    ion = pd.read_table(ion_file, comment='#')
+    in_vcf = pyvcf.Reader(open(vcf_file))
+    vcf = pd.DataFrame.from_records(list(vcf_iterable(in_vcf)), \
+            columns=['Locus','_OPOS','_OREF','_OALT','_QUAL'] + \
+                    ['_'+sample+'_GT' for sample in in_vcf.samples])
+    return pd.merge(ion, vcf, on='Locus')
+
 if __name__ == '__main__':
+    #TODO Merge other tsv information by locus(CHROM:POS)
     # Read input
     parser = argparse.ArgumentParser()
-    parser.add_argument("files", nargs='+', help="List of vcfs")
+    parser.add_argument("files", nargs='+', help="List of vcf and a (optional) \
+                        table to merge to it")
     parser.add_argument("-o", "--output_suffix", help="Specify a suffix to \
-                        output files. If provided, files will be saved \
-                        in same input tables directory.")
+                        merged output files. If provided, files will be saved \
+                        in same vcf input directory.")
     args = parser.parse_args()
     files = args.files
     out_suffix = args.output_suffix
 
-    # take and order only vcfs
+    # Split files by extension and (hopefully) paired by lexicographic sorting
     vcfs = sorted([v for v in files if os.path.splitext(v)[1] == '.vcf'])
+    tables = sorted([t for t in files if os.path.splitext(t)[1] != '.vcf'])
+    # (soft) check on wrong pairing
+    if len(vcfs)!=len(tables): raise Error('Files mismatch: check correct \
+    pairing 1 vcf -> 1 table')
 
-    # Process by file
-    for vcf in vcfs:
+    # Process by pair
+    for vcf, table in zip(vcfs, tables):
         # Print on stdout (if multiple file, header will be repeated) or append
-        # to table name the provided suffix and write to multiple file
+        # to vcf name the provided suffix and write to multiple file
         out = sys.stdout if out_suffix is None else \
                             os.path.splitext(vcf)[0] + out_suffix
-        vcf2df(vcf).to_csv(out+'.tsv', sep='\t', index=False)
+        vcf_df = vcf2df(vcf)                # Convert vcf in a DataFrame
+        #vcf_df = mergeTable(vcf_df, table)  # Enrich with other table
+        vcf_df.to_csv(out+'.tsv', sep='\t', index=False)
