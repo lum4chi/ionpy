@@ -5,6 +5,7 @@
 ''' Goal of this script is to convert ThermoFisher Ion Torrent™ Variant Caller
     output (VCF file) in a TSV table, preserving much information as possible.
 '''
+#TODO: assuming only one sample x vcf. Hasn't tested on n_sample x vcf yet!!
 
 import vcf as pyvcf
 import pandas as pd
