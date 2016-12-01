@@ -146,6 +146,10 @@ if __name__ == '__main__':
         # to vcf name the provided suffix and write to multiple file
         out = sys.stdout if out_suffix is None else \
                             os.path.splitext(vcf)[0] + out_suffix + '.tsv'
+        print("Converting {}".format(vcf))
         vcf_df = vcf2df(vcf)                    # Convert vcf in a DataFrame
-        vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
+        if len(tables)>0:
+            print(" + Merging with {}".format(tables[i]))
+            vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
         vcf_df.to_csv(out, sep='\t', index=False)
+    print("Done!")
