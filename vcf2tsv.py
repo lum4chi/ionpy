@@ -73,23 +73,23 @@ def flattenRecord(r):
     return variant_as_val
 
 COLUMNS_ORDER = [
-'CHROM','POS','OPOS','REF','Ref','OREF','ALT','OALT','OMAPALT','TYPE','Type',
-'FILTER','No Call Reason','gene','Genes','location','Location','LEN',
-'Homopolymer Length','Length','HS','Info','HRUN','ID','OID','Variant ID',
-'Variant Name','exon','Exon','transcript','Transcript','Strand','coding',
-'Coding','codon','function','Variant Effect','Amino Acid Change','protein',
-'QUAL','QD','p-value','Phred QUAL Score','DP','Coverage','FDP','AF','AO',
-'% Frequency','FAO','Allele Coverage','Allele Ratio','Ref+/Ref-/Var+/Var-',
-'FRO','FR','FSAF','FSAR','FSRF','FSRR','FWDB','FXX','MLLD','RBI','REFB','REVB',
-'RO','SAF','SAR','SRF','SRR','SSEN','SSEP','SSSB','STB','STBP','VARB',
-'grantham','Grantham','PhyloP','sift','SIFT','polyphen','PolyPhen','PFAM',
-'dbSNP','DGV','MAF','EMAF','AMAF','GMAF','UCSC Common SNPs','COSMIC','OMIM',
-'Gene Ontology','DrugBank','ClinVar','gt','GT','Genotype','GQ','normalizedAlt',
-'normalizedPos','normalizedRef','origAlt','origPos','origRef'
+"Locus","CHROM","POS","OPOS","REF","Ref","OREF","ALT","OALT","OMAPALT","TYPE",
+"Type","FILTER","No Call Reason","gene","Genes","location","Location","LEN",
+"Homopolymer Length","Length","HS","Info","HRUN","ID","OID","Variant ID",
+"Variant Name","exon","Exon","transcript","Transcript","Strand","coding",
+"Coding","codon","function","Variant Effect","Amino Acid Change","protein",
+"QUAL","QD","p-value","Phred QUAL Score","DP","Coverage","FDP","AF","AO",
+"% Frequency","FAO","Allele Coverage","Allele Ratio","Ref+/Ref-/Var+/Var-",
+"FRO","FR","FSAF","FSAR","FSRF","FSRR","FWDB","FXX","MLLD","RBI","REFB","REVB",
+"RO","SAF","SAR","SRF","SRR","SSEN","SSEP","SSSB","STB","STBP","VARB",
+"grantham","Grantham","PhyloP","sift","SIFT","polyphen","PolyPhen","PFAM",
+"dbSNP","DGV","MAF","EMAF","AMAF","GMAF","UCSC Common SNPs","COSMIC","OMIM",
+"Gene Ontology","DrugBank","ClinVar","gt","GT","Genotype","GQ","normalizedAlt",
+"normalizedPos","normalizedRef","origAlt","origPos","origRef"
 ]
 
 def orderer(order, element):
-    ''' Custom order for columns and push to the bottom unknown field'''
+    ''' Custom order for columns, pushing to the bottom unknown field'''
     try:
         return order.index(element)
     except:
@@ -117,7 +117,7 @@ def mergeTable(df, table):
     tab = pd.read_table(table, comment='#')
     df['KEY'] = df.CHROM.str.cat(df.POS.map(str), sep=':')
     m = pd.merge(df, tab, how='left', left_on='KEY', right_on='Locus')
-    m.drop(['KEY', 'Locus'], axis=1, inplace=True)
+    m.drop(['KEY'], axis=1, inplace=True)
     return m[sorted(m.columns, key=lambda x:orderer(COLUMNS_ORDER, x))]
 
 if __name__ == '__main__':
