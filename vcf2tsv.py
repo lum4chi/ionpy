@@ -39,7 +39,7 @@ KNOWN_DATATYPE = {
 "RO": int, "SAF": int, "SAR": int, "SRF": int, "SRR": int, "SSEN": float,
 "SSEP": float, "SSSB": float, "STB": float, "STBP": float, "TYPE": str,
 "VARB": float, "FUNC": str, "LB": str, "exon": int, "Exon": int, "POS": int,
-"Coverage": int, "GQ": int,
+"Coverage": int, "GQ": int, "Grantham": int
 }
 
 def readabilify(df):
@@ -103,15 +103,18 @@ def readabilify(df):
         df["Allele Coverage Ref"].str.split("=").apply(lambda x: x[-1])
     df["Allele Coverage Alt"]= \
         df["Allele Coverage Alt"].str.split("=").apply(lambda x: x[-1])
-    df["Allele Ratio REF"]= \
+    df["Allele Ratio Ref"]= \
         df["Allele Ratio Ref"].str.split("=").apply(lambda x: x[-1])
-    df["Allele Ratio ALT"]= \
+    df["Allele Ratio Alt"]= \
         df["Allele Ratio Alt"].str.split("=").apply(lambda x: x[-1])
     del df["Allele Coverage"]
     del df["Allele Ratio"]
     # AF -> % Frequency
     df["% Frequency"]=df.AF
     del df["AF"]
+    # Heterozigosity flagging
+    df["Genotype Flag"]=df.GT.str.split("/|\|").apply( \
+        lambda x: x[0]==x[1]).apply(lambda x: "Hom" if x else "Het")
     # End
     return df
 
