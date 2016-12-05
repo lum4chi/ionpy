@@ -39,7 +39,7 @@ KNOWN_DATATYPE = {
 "RO": int, "SAF": int, "SAR": int, "SRF": int, "SRR": int, "SSEN": float,
 "SSEP": float, "SSSB": float, "STB": float, "STBP": float, "TYPE": str,
 "VARB": float, "FUNC": str, "LB": str, "exon": int, "Exon": int, "POS": int,
-"Coverage": int, "GQ": int, "Grantham": int
+"Coverage": int, "GQ": int
 }
 
 def readabilify(df):
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     # (soft) check on wrong pairing
     if len(tables)>0 and len(vcfs)!=len(tables):
-        raise Error('Files mismatch: check correct pairing 1 vcf -> 1 table')
+        raise Exception('Files mismatch: check correct pairing 1 vcf -> 1 table')
 
     # Process by pair
     for i, vcf in enumerate(vcfs):
