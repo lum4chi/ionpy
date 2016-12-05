@@ -12,10 +12,116 @@ import pandas as pd
 import numpy as np
 import json, argparse, os, sys
 
+# Impose an order for known columns
+KNOWN_COLUMNS = [
+"Locus","CHROM","POS","OPOS","REF","Ref","OREF","ALT","OALT","OMAPALT","TYPE",
+"Type","FILTER","No Call Reason","gene","Genes","location","Location","LEN",
+"Homopolymer Length","Length","HS","Info","HRUN","ID","OID","Variant ID",
+"Variant Name","exon","Exon","transcript","Transcript","Strand","coding",
+"Coding","codon","function","Variant Effect","Amino Acid Change","protein",
+"QUAL","QD","p-value","Phred QUAL Score","DP","Coverage","FDP","AF","AO",
+"% Frequency","FAO","Allele Coverage","Allele Ratio","Ref+/Ref-/Var+/Var-",
+"FRO","FR","FSAF","FSAR","FSRF","FSRR","FWDB","FXX","MLLD","RBI","REFB","REVB",
+"RO","SAF","SAR","SRF","SRR","SSEN","SSEP","SSSB","STB","STBP","VARB",
+"grantham","Grantham","PhyloP","sift","SIFT","polyphen","PolyPhen","PFAM",
+"dbSNP","DGV","MAF","EMAF","AMAF","GMAF","UCSC Common SNPs","COSMIC","OMIM",
+"Gene Ontology","DrugBank","ClinVar","gt","GT","Genotype","GQ","normalizedAlt",
+"normalizedPos","normalizedRef","origAlt","origPos","origRef"
+]
+
+# Impose datatype when known
+KNOWN_DATATYPE = {
+"AF": float, "AO": int, "DP": int, "FAO": int, "FDP": int, "FR": str,
+"FRO": int, "FSAF": int, "FSAR": int, "FSRF": int, "FSRR": int, "FWDB": float,
+"FXX": float, "HRUN": int, "HS": bool, "LEN": int, "MLLD": float, "NS": int,
+"OALT": str, "OID": str, "OMAPALT": str, "OPOS": int, "OREF": str, "PB": float,
+"PBP": float, "QD": float, "RBI": float, "REFB": float, "REVB": float,
+"RO": int, "SAF": int, "SAR": int, "SRF": int, "SRR": int, "SSEN": float,
+"SSEP": float, "SSSB": float, "STB": float, "STBP": float, "TYPE": str,
+"VARB": float, "FUNC": str, "LB": str, "exon": int, "Exon": int, "POS": int,
+"Coverage": int, "GQ": int,
+}
+
+def readabilify(df):
+    # Support function to extract info by genotype (method change by cols)
+    def chooser(position_list, genotype):
+        genotype = genotype[2]
+        extra_rules = {".","0"}
+        if genotype in extra_rules: return position_list[0]
+        return position_list[int(genotype)-1]
+
+    def chooser3(position_list, genotype):
+        genotype = genotype[2]
+        extra_rules = {".","0"}
+        if genotype in extra_rules: return position_list[0]
+        return ', '.join([str(position_list[0]), \
+                            str(position_list[int(genotype)])])
+    # Start
+    selection=[
+    "CHROM","POS","Genotype","Ref","Type","Genes","Location","Length","Info",
+    "Variant ID","Variant Name","AF","Strand","Exon","Transcript","Coding",
+    "Amino Acid Change","Variant Effect","PhyloP","SIFT","Grantham","PolyPhen",
+    "PFAM","dbSNP","DGV","MAF","EMAF","AMAF","GMAF","UCSC Common SNPs","COSMIC",
+    "OMIM","Gene Ontology","DrugBank","ClinVar","Allele Coverage",
+    "Allele Ratio","p-value","Phred QUAL Score","Coverage",
+    "Ref+/Ref-/Var+/Var-","OPOS","OREF","OALT","GQ","GT"
+    ]
+    composite1=["OPOS","OREF","OALT","AF"]  # split by ";"
+    composite3=["Allele Coverage","Allele Ratio", \
+                "Ref+/Ref-/Var+/Var-"] # split by ", " and keep 1st
+    # Columns subset
+    df=df[selection]
+    # Filtering REF&NOCALL
+    df=df[(df.Type!="REF")&(df.Type!="NOCALL")]
+    if len(df)==0: return df # skip if empty
+    # Choise by GT
+    df[composite1]=df[composite1].apply(lambda x: x.str.split(";"))
+    df[composite1]=df[list(composite1)+['GT']].apply( \
+        lambda x: x.iloc[:-1][~x.isnull()].apply( \
+            lambda y: chooser(y,x.GT)), axis=1)
+    df[composite3]=df[composite3].apply(lambda x: x.str.split(", "))
+    df[composite3]=df[list(composite3)+['GT']].apply( \
+        lambda x: x.iloc[:-1][~x.isnull()].apply( \
+            lambda y: chooser3(y,x.GT)), axis=1)
+    # Split Ref/Var
+    df[composite3]=df[composite3].apply(lambda x: x.str.split(", "))
+    # Separate "Ref+/Ref-/Var+/Var-"
+    df[["Ref+/-","Var+/-"]]=df["Ref+/Ref-/Var+/Var-"].apply(pd.Series)
+    df["Ref+/-"]=df["Ref+/-"].str.split("=").apply(lambda x: x[-1])
+    df[["Ref+","Ref-"]]=df["Ref+/-"].str.split("/").apply(pd.Series)
+    df["Var+/-"]=df["Var+/-"].str.split("=").apply(lambda x: x[-1])
+    df[["Var+","Var-"]]=df["Var+/-"].str.split("/").apply(pd.Series)
+    del df["Ref+/Ref-/Var+/Var-"]
+    del df["Ref+/-"]
+    del df["Var+/-"]
+    # Separate Allele info
+    df[["Allele Coverage Ref","Allele Coverage Alt"]]= \
+        df["Allele Coverage"].apply(pd.Series)
+    df[["Allele Ratio Ref","Allele Ratio Alt"]]= \
+        df["Allele Ratio"].apply(pd.Series)
+    df["Allele Coverage Ref"]= \
+        df["Allele Coverage Ref"].str.split("=").apply(lambda x: x[-1])
+    df["Allele Coverage Alt"]= \
+        df["Allele Coverage Alt"].str.split("=").apply(lambda x: x[-1])
+    df["Allele Ratio REF"]= \
+        df["Allele Ratio Ref"].str.split("=").apply(lambda x: x[-1])
+    df["Allele Ratio ALT"]= \
+        df["Allele Ratio Alt"].str.split("=").apply(lambda x: x[-1])
+    del df["Allele Coverage"]
+    del df["Allele Ratio"]
+    # AF -> % Frequency
+    df["% Frequency"]=df.AF
+    del df["AF"]
+    # End
+    return df
+
 def flattenRecord(r):
     ''' Extract from vcf interesting field: main goal is to exclude unwanted
         info but never include it explicity. This allow to NOT skip some
         unexpected info.
+        Assuming only one sample, can be divide single array as a value and
+        composite value as list of values separated by ";" (to increase
+        readability and compatibility to work with other apps, i.e. R)
     '''
     # Import as possible
     variant = r.__dict__
@@ -72,28 +178,20 @@ def flattenRecord(r):
     variant_as_val.update(func_as_val)
     return variant_as_val
 
-COLUMNS_ORDER = [
-"Locus","CHROM","POS","OPOS","REF","Ref","OREF","ALT","OALT","OMAPALT","TYPE",
-"Type","FILTER","No Call Reason","gene","Genes","location","Location","LEN",
-"Homopolymer Length","Length","HS","Info","HRUN","ID","OID","Variant ID",
-"Variant Name","exon","Exon","transcript","Transcript","Strand","coding",
-"Coding","codon","function","Variant Effect","Amino Acid Change","protein",
-"QUAL","QD","p-value","Phred QUAL Score","DP","Coverage","FDP","AF","AO",
-"% Frequency","FAO","Allele Coverage","Allele Ratio","Ref+/Ref-/Var+/Var-",
-"FRO","FR","FSAF","FSAR","FSRF","FSRR","FWDB","FXX","MLLD","RBI","REFB","REVB",
-"RO","SAF","SAR","SRF","SRR","SSEN","SSEP","SSSB","STB","STBP","VARB",
-"grantham","Grantham","PhyloP","sift","SIFT","polyphen","PolyPhen","PFAM",
-"dbSNP","DGV","MAF","EMAF","AMAF","GMAF","UCSC Common SNPs","COSMIC","OMIM",
-"Gene Ontology","DrugBank","ClinVar","gt","GT","Genotype","GQ","normalizedAlt",
-"normalizedPos","normalizedRef","origAlt","origPos","origRef"
-]
-
 def orderer(order, element):
     ''' Custom order for columns, pushing to the bottom unknown field'''
     try:
         return order.index(element)
     except:
         return np.inf
+
+# Try to impose a type where possible
+def formattify(df):
+    for col in df:
+        try:
+            df[col] = df[col].astype(KNOWN_DATATYPE[col])
+        except: continue
+    return df
 
 def vcf2df(a_vcf):
     ''' Take a vcf and parsing in a pandas DataFrame '''
@@ -103,22 +201,16 @@ def vcf2df(a_vcf):
     for r in vcf:
         df = df.append(flattenRecord(r), ignore_index=True)
     # Columns ordering
-    df=df[sorted(df.columns, key=lambda x:orderer(COLUMNS_ORDER, x))]
-    # Type formatting
-    df.POS = df.POS.astype(int)
-    df.DP = df.DP.astype(int)
-    df.FDP = df.FDP.astype(int)
-    df.HS = df.HS.astype(bool)
+    df=df[sorted(df.columns, key=lambda x:orderer(KNOWN_COLUMNS, x))]
     return df
 
 # Merge information
-#TODO Merge other tsv information by locus(CHROM:POS)
 def mergeTable(df, table):
-    tab = pd.read_table(table, comment='#')
+    t = pd.read_table(table, comment='#')
     df['KEY'] = df.CHROM.str.cat(df.POS.map(str), sep=':')
-    m = pd.merge(df, tab, how='left', left_on='KEY', right_on='Locus')
+    m = pd.DataFrame(df.merge(t, how='left', left_on='KEY', right_on='Locus'))
     m.drop(['KEY'], axis=1, inplace=True)
-    return m[sorted(m.columns, key=lambda x:orderer(COLUMNS_ORDER, x))]
+    return m[sorted(m.columns, key=lambda x:orderer(KNOWN_COLUMNS, x))]
 
 if __name__ == '__main__':
     # Read input
@@ -128,9 +220,14 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output_suffix", help="Specify a suffix to \
                         merged output files. If provided, files will be saved \
                         in same vcf input directory.")
+    parser.add_argument("-f", "--filter", dest="toReadabilify",
+                        action="store_true", help="Subset/Filter/Genotyping \
+                        according to 'readabilify' function (see code)")
+    parser.set_defaults(toReadabilify=False)
     args = parser.parse_args()
     files = args.files
     out_suffix = args.output_suffix
+    toReadabilify = args.toReadabilify
 
     # Split files by extension and (hopefully) paired by lexicographic sorting
     vcfs = sorted([v for v in files if os.path.splitext(v)[1] == '.vcf'])
@@ -148,8 +245,13 @@ if __name__ == '__main__':
                             os.path.splitext(vcf)[0] + out_suffix + '.tsv'
         print("Converting {}".format(vcf))
         vcf_df = vcf2df(vcf)                    # Convert vcf in a DataFrame
-        if len(tables)>0:
+        vcf_df = formattify(vcf_df)
+        if len(tables)>0:                       # Enrich with paired table
             print(" + Merging with {}".format(tables[i]))
-            vcf_df = mergeTable(vcf_df, tables[i])  # Enrich with paired table
+            vcf_df = mergeTable(vcf_df, tables[i])
+        if toReadabilify:                       # "Clean" version
+            print(" + Apply cleaning...")
+            vcf_df = readabilify(vcf_df)
+        vcf_df = formattify(vcf_df)
         vcf_df.to_csv(out, sep='\t', index=False)
     print("Done!")
