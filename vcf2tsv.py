@@ -42,7 +42,16 @@ KNOWN_DATATYPE = {
 "Coverage": int, "GQ": int
 }
 
+def FreqN_assert_equals_dot(iterable):
+    # when reading a vcf, be sure that FreqN field is not unknown
+    for row in iterable:
+        m = re.search('FreqN.', row)
+        if m != None and m.group(0)[-1] == ";":
+            row = re.sub('FreqN;', 'FreqN=.;', row)
+        yield row
+
 def INFO_assert_quoted(iterable):
+    # When reading vcf, be sure every header field is quoted
     for row in iterable:
         if "##INFO" in row:
             # separate key=value
@@ -213,7 +222,7 @@ def formattify(df):
 
 def vcf2df(a_vcf):
     ''' Take a vcf and parsing in a pandas DataFrame '''
-    vcf = pyvcf.Reader(INFO_assert_quoted(open(a_vcf)))
+    vcf = pyvcf.Reader(FreqN_assert_equals_dot(INFO_assert_quoted(open(a_vcf))))
     df = pd.DataFrame()
     # Loading
     for r in vcf:
