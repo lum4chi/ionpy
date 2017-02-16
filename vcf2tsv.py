@@ -10,7 +10,7 @@
 import vcf as pyvcf
 import pandas as pd
 import numpy as np
-import json, argparse, os, sys
+import json, argparse, os, sys, re
 
 # Impose an order for known columns
 KNOWN_COLUMNS = [
