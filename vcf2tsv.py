@@ -235,7 +235,7 @@ def vcf2df(a_vcf):
 def mergeTable(df, table):
     t = pd.read_table(table, comment='#')
     df['KEY'] = df.CHROM.str.cat(df.POS.map(str), sep=':')
-    m = pd.DataFrame(df.merge(t, how='left', left_on='KEY', right_on='locus'))
+    m = pd.DataFrame(df.merge(t, how='left', left_on='KEY', right_on='Locus'))
     m.drop(['KEY'], axis=1, inplace=True)
     return m[sorted(m.columns, key=lambda x:orderer(KNOWN_COLUMNS, x))]
 
