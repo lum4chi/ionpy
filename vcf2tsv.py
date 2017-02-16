@@ -52,9 +52,9 @@ def INFO_assert_quoted(iterable):
             # if not quoted, requote!
             if _dict['Description'][0] != '"':
                 _dict['Description'] = '"{}"'.format(_dict['Description'])
-                row = '##INFO=<ID={0},Number={1},Type={2},Description={3}>\n'
-                .format(_dict['ID'], _dict['Number'], _dict['Type'], \
-                    _dict['Description'])
+                row = '##INFO=<ID={0},Number={1},Type={2},Description={3}>\n' \
+                    .format(_dict['ID'], _dict['Number'], _dict['Type'], \
+                        _dict['Description'])
         yield row
 
 def readabilify(df):
