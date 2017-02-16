@@ -42,6 +42,21 @@ KNOWN_DATATYPE = {
 "Coverage": int, "GQ": int
 }
 
+def INFO_assert_quoted(iterable):
+    for row in iterable:
+        if "##INFO" in row:
+            # separate key=value
+            _dict = row[8:].strip()[:-1].split(',', 3)
+            # organize in a dict
+            _dict = {el.split("=")[0]:el.split("=")[1] for el in _dict}
+            # if not quoted, requote!
+            if _dict['Description'][0] != '"':
+                _dict['Description'] = '"{}"'.format(_dict['Description'])
+                row = '##INFO=<ID={0},Number={1},Type={2},Description={3}>\n'
+                .format(_dict['ID'], _dict['Number'], _dict['Type'], \
+                    _dict['Description'])
+        yield row
+
 def readabilify(df):
     # Support function to extract info by genotype (method change by cols)
     def chooser(position_list, genotype):
@@ -198,7 +213,7 @@ def formattify(df):
 
 def vcf2df(a_vcf):
     ''' Take a vcf and parsing in a pandas DataFrame '''
-    vcf = pyvcf.Reader(open(a_vcf))
+    vcf = pyvcf.Reader(INFO_assert_quoted(open(a_vcf)))
     df = pd.DataFrame()
     # Loading
     for r in vcf:
