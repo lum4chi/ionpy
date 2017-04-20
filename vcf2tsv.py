@@ -166,23 +166,24 @@ def flattenRecord(r):
     # Pop info for flattening
     info = variant.pop('INFO', None)
     func_as_garbage = info.pop('FUNC', None)
-    # Flatten FUNC
-    j = json.JSONDecoder()
-    func_as_json = ','.join(func_as_garbage) # pyvcf doesn't like json...
-    func_as_jlist = j.decode(func_as_json.replace('\'','\"'))
-    func_as_list = dict()
-    for transcript in func_as_jlist:
-        # Gather all the keys (need for preserving order)
-        for k in transcript.keys():
-            func_as_list[k] = []
-    for transcript in func_as_jlist:
-        # now append, if key missing on json, add ""
-        for k in func_as_list.keys():
-            try:
-                func_as_list[k].append(transcript[k])
-            except KeyError:
-                func_as_list[k].append(".")
-    func_as_val = {k:';'.join(v) for k,v in func_as_list.items()}
+    # if exists Flatten FUNC
+    if func_as_garbage is not None:
+        j = json.JSONDecoder()
+        func_as_json = ','.join(func_as_garbage) # pyvcf doesn't like json...
+        func_as_jlist = j.decode(func_as_json.replace('\'','\"'))
+        func_as_list = dict()
+        for transcript in func_as_jlist:
+            # Gather all the keys (need for preserving order)
+            for k in transcript.keys():
+                func_as_list[k] = []
+        for transcript in func_as_jlist:
+            # now append, if key missing on json, add ""
+            for k in func_as_list.keys():
+                try:
+                    func_as_list[k].append(transcript[k])
+                except KeyError:
+                    func_as_list[k].append(".")
+        func_as_val = {k:';'.join(v) for k,v in func_as_list.items()}
     # Flatten INFO
     info_as_list = {k:v for k,v in info.items() if type(v)==list}
     info_as_val = {k:v for k,v in info.items() if type(v)!=list}
@@ -202,7 +203,8 @@ def flattenRecord(r):
     # Merge in a (almost) one-dim-dict
     variant_as_val.update(sample_as_val)
     variant_as_val.update(info_as_val)
-    variant_as_val.update(func_as_val)
+    #if exists add FUNC
+    if func_as_garbage is not None: variant_as_val.update(func_as_val)
     return variant_as_val
 
 def orderer(order, element):
@@ -222,7 +224,9 @@ def formattify(df):
 
 def vcf2df(a_vcf):
     ''' Take a vcf and parsing in a pandas DataFrame '''
-    vcf = pyvcf.Reader(FreqN_assert_equals_dot(INFO_assert_quoted(open(a_vcf))))
+    # Sometimes needed for wrong vcf format 
+    #vcf = pyvcf.Reader(FreqN_assert_equals_dot(INFO_assert_quoted(open(a_vcf))))
+    vcf = pyvcf.Reader(open(a_vcf))
     df = pd.DataFrame()
     # Loading
     for r in vcf:
