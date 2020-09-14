@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2016 Francesco Lumachi <francesco.lumachi@gmail.com>
-''' Goal of this script is to resume ThermoFisher Ion Torrent™ Coverage Analysis
+''' Goal of this script is to summarise ThermoFisher Ion Torrent™ Coverage Analysis
     output (*.stats.cov.txt files) in a CSV table. Those files are usually
     stored in:
         /results/analysis/output/Home/<run>/plugin_out/<coverageAnalysis_out>/*
